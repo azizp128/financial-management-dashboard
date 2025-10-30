@@ -3,19 +3,19 @@ import matplotlib.pyplot as plt
 
 # --- CONFIG ---
 INPUT_FILES = {
-    'sales': '01. Sales.xlsx',
-    'expenses': '02. Expenses.xlsx',
-    'coa': '03. Mapping_COA.xlsx'
+    'sales': 'sales.xlsx',
+    'expenses': 'expenses.xlsx',
+    'coa': 'mapping_coa.xlsx'
 }
-OUTPUT_FILE = 'Finance_Report_Automation.xlsx'
-CHART_FILE = 'Revenue_vs_Profit.png'
+OUTPUT_FILE = 'output/finance_report_automation.xlsx'
+CHART_FILE = 'output/revenue_vs_profit.png'
 
 # --- PART 1: DATA PREPARATION ---
 def load_and_clean_data():
     # Load data
-    sales = pd.read_excel(INPUT_FILES['sales'])
-    expenses = pd.read_excel(INPUT_FILES['expenses'])
-    coa = pd.read_excel(INPUT_FILES['coa'])
+    sales = pd.read_excel(f"datasets/{INPUT_FILES['sales']}")
+    expenses = pd.read_excel(f"datasets/{INPUT_FILES['expenses']}")
+    coa = pd.read_excel(f"datasets/{INPUT_FILES['coa']}")
 
     # Standardize Sales
     sales = sales.rename(columns={
@@ -87,15 +87,15 @@ def load_and_clean_data():
 
     if unused_in_transactions:
         print("⚠️ Peringatan: Ada transaksi yang tidak terpetakan di COA!\n\tDaftar kategori belum terpetakan:", list(unused_in_transactions))
-        output_unused_in_transactions.to_csv("Unmapped_Transactions.csv", index=False)
-        print("👉 Disimpan di Unmapped_Transactions.csv untuk review.")
+        output_unused_in_transactions.to_csv("output/unmapped_transactions.csv", index=False)
+        print("👉 Disimpan di unmapped_transactions.csv untuk review.")
 
     return transactions_merged
 
 # --- PART 2: AUTOMATED P&L ---
 def generate_pnl(transactions):
     # Daftar AccountType yang diharapkan (berdasarkan COA)
-    expected_types = list(set(pd.read_excel("03. Mapping_COA.xlsx")['AccountType']))  # ['Revenue', 'OPEX', 'COGS']
+    expected_types = list(set(pd.read_excel(f"datasets/{INPUT_FILES['coa']}")['AccountType']))  # ['Revenue', 'OPEX', 'COGS']
 
     # Deteksi akun yang diharapkan tapi tidak ada di transaksi
     missing_accounts = [acct for acct in expected_types if acct not in transactions['AccountType'].unique()]
@@ -368,9 +368,9 @@ def main():
     insights = generate_insights(pnl)
 
     # Import raw data for saving
-    sales = pd.read_excel(INPUT_FILES['sales'])
-    expenses = pd.read_excel(INPUT_FILES['expenses'])
-    coa = pd.read_excel(INPUT_FILES['coa'])
+    sales = pd.read_excel(f"datasets/{INPUT_FILES['sales']}")
+    expenses = pd.read_excel(f"datasets/{INPUT_FILES['expenses']}")
+    coa = pd.read_excel(f"datasets/{INPUT_FILES['coa']}")
 
     # Save to Excel
     with pd.ExcelWriter(OUTPUT_FILE, engine='openpyxl') as writer:
@@ -381,12 +381,12 @@ def main():
         coa.to_excel(writer, sheet_name='Mapping_COA', index=False)
 
     # Save insights
-    with open('Insights_Summary.txt', 'w') as f:
+    with open('output/insights_summary.txt', 'w') as f:
         f.write(insights)
 
     print(f"✅ Report saved to: {OUTPUT_FILE}")
     print(f"📊 Chart saved to: {CHART_FILE}")
-    print(f"💡 Insights saved to: Insights_Summary.txt")
+    print(f"💡 Insights saved to: insights_summary.txt")
     print("\n" + insights)
 
 if __name__ == "__main__":
