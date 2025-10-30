@@ -116,10 +116,8 @@ def prepare_transactions(sales, expenses, coa):
     
     return transactions_merged
 
-def generate_pnl(transactions):
+def generate_pnl(transactions, coa):
     """Generate Profit & Loss statement"""
-    coa_types = transactions['AccountType'].dropna().unique()
-    
     pnl = transactions.pivot_table(
         index=['Year', 'Month', 'Period'],
         columns='AccountType',
@@ -128,18 +126,23 @@ def generate_pnl(transactions):
         fill_value=0
     ).reset_index()
     
-    # Ensure all account types exist
     for acct in ['Revenue', 'OPEX', 'COGS']:
         if acct not in pnl.columns:
             pnl[acct] = 0
     
-    # Calculate metrics
     pnl['Expense'] = abs(pnl.get('OPEX', 0) + pnl.get('COGS', 0))
     pnl['Net Profit'] = pnl.get('Revenue', 0) - pnl['Expense']
     pnl['Margin (%)'] = (pnl['Net Profit'] / pnl['Revenue'].replace(0, 1)) * 100
     
-    # Sort by period
     pnl = pnl.sort_values(['Year', 'Month'])
+    
+    # Check for missing accounts
+    expected_types = list(set(coa['AccountType'].dropna()))
+    existing_types = set(transactions['AccountType'].dropna().unique())
+    missing_accounts = [acct for acct in expected_types if acct not in existing_types]
+    
+    # Store missing accounts for later use
+    pnl._missing_accounts = missing_accounts
     
     return pnl
 
@@ -199,7 +202,11 @@ def main():
             return
         
         transactions = prepare_transactions(sales, expenses, coa)
-        pnl = generate_pnl(transactions)
+        pnl = generate_pnl(transactions, coa)
+
+        # Extract data quality issues
+        unmapped_categories = getattr(transactions, '_unmapped_categories', set())
+        missing_accounts = getattr(pnl, '_missing_accounts', [])
     
     # === KPI SUMMARY SECTION ===
     st.header("📈 Key Performance Indicators")
@@ -487,6 +494,144 @@ def main():
                 st.progress(row['Revenue'] / product_perf['Revenue'].max())
     
     st.markdown("---")
+
+    # === DATA RECONCILIATION SECTION (CONDITIONAL) ===
+    if unmapped_categories or missing_accounts:
+        st.header("⚠️ Data Reconciliation Issues")
+        
+        st.warning("""
+        **Attention Required:** Data quality issues have been detected that may affect report accuracy.
+        Please review and address the following issues:
+        """)
+        
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            if unmapped_categories:
+                st.error(f"**🔴 {len(unmapped_categories)} Unmapped Categories Found**")
+                st.markdown("""
+                These categories exist in your transaction data but are not mapped in the Chart of Accounts.
+                This may cause incomplete financial reporting.
+                """)
+                
+                unmapped_df = pd.DataFrame({
+                    'Category': sorted(list(unmapped_categories)),
+                    'Status': ['Not Mapped'] * len(unmapped_categories),
+                    'Impact': ['Financial data not categorized'] * len(unmapped_categories)
+                })
+                
+                st.dataframe(unmapped_df, use_container_width=True, height=200)
+                
+                # Count transactions affected
+                affected_transactions = transactions[transactions['Category'].isin(unmapped_categories)]
+                affected_amount = abs(affected_transactions['Amount'].sum())
+                
+                st.metric(
+                    label="Affected Transactions",
+                    value=f"{len(affected_transactions)} transactions",
+                    delta=f"IDR {affected_amount:,.0f} total amount"
+                )
+                
+                # Download button for unmapped categories
+                unmapped_csv = unmapped_df.to_csv(index=False)
+                st.download_button(
+                    label="📥 Download Unmapped Categories",
+                    data=unmapped_csv,
+                    file_name=f"Unmapped_Categories_{datetime.now().strftime('%Y%m%d')}.csv",
+                    mime="text/csv",
+                    type="primary"
+                )
+            else:
+                st.success("**✅ All Categories Mapped**")
+                st.markdown("All transaction categories are properly mapped to the Chart of Accounts.")
+        
+        with col2:
+            if missing_accounts:
+                st.error(f"**🔴 {len(missing_accounts)} Missing Account Types**")
+                st.markdown("""
+                These account types are defined in your COA but have no transactions this period.
+                This may indicate missing data or inactive accounts.
+                """)
+                
+                missing_df = pd.DataFrame({
+                    'Account Type': sorted(missing_accounts),
+                    'Status': ['No Transactions'] * len(missing_accounts),
+                    'Recommendation': ['Verify if transactions exist'] * len(missing_accounts)
+                })
+                
+                st.dataframe(missing_df, use_container_width=True, height=200)
+                
+                st.info("""
+                **Note:** Missing account types may be expected if:
+                - The account is not active this period
+                - It's a new account with no history yet
+                - Certain expense types don't occur every month
+                """)
+                
+                # Download button for missing accounts
+                missing_csv = missing_df.to_csv(index=False)
+                st.download_button(
+                    label="📥 Download Missing Accounts",
+                    data=missing_csv,
+                    file_name=f"Missing_Accounts_{datetime.now().strftime('%Y%m%d')}.csv",
+                    mime="text/csv",
+                    type="primary"
+                )
+            else:
+                st.success("**✅ All Account Types Active**")
+                st.markdown("All expected account types have transactions in this period.")
+        
+        # Combined reconciliation report
+        st.markdown("---")
+        st.subheader("📋 Complete Reconciliation Report")
+        
+        reconciliation_summary = {
+            'Issue Type': [],
+            'Count': [],
+            'Severity': [],
+            'Action Required': []
+        }
+        
+        if unmapped_categories:
+            reconciliation_summary['Issue Type'].append('Unmapped Categories')
+            reconciliation_summary['Count'].append(len(unmapped_categories))
+            reconciliation_summary['Severity'].append('High')
+            reconciliation_summary['Action Required'].append('Add mappings to COA')
+        
+        if missing_accounts:
+            reconciliation_summary['Issue Type'].append('Missing Account Types')
+            reconciliation_summary['Count'].append(len(missing_accounts))
+            reconciliation_summary['Severity'].append('Medium')
+            reconciliation_summary['Action Required'].append('Verify transaction completeness')
+        
+        summary_df = pd.DataFrame(reconciliation_summary)
+        st.dataframe(summary_df, use_container_width=True)
+        
+        # Combined download
+        col1, col2, col3 = st.columns(3)
+        with col2:
+            # Create combined reconciliation file
+            with pd.ExcelWriter('reconciliation_report.xlsx', engine='openpyxl') as writer:
+                if unmapped_categories:
+                    unmapped_df.to_excel(writer, sheet_name='Unmapped Categories', index=False)
+                    affected_transactions.to_excel(writer, sheet_name='Affected Transactions', index=False)
+                
+                if missing_accounts:
+                    missing_df.to_excel(writer, sheet_name='Missing Accounts', index=False)
+                
+                summary_df.to_excel(writer, sheet_name='Summary', index=False)
+            
+            with open('reconciliation_report.xlsx', 'rb') as f:
+                st.download_button(
+                    label="📥 Download Complete Reconciliation Report",
+                    data=f,
+                    file_name=f"Reconciliation_Report_{datetime.now().strftime('%Y%m%d')}.xlsx",
+                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                    type="primary",
+                    use_container_width=True
+                )
+        
+        st.markdown("---")
     
     # === EXPORT SECTION ===
     st.header("📥 Export Reports")
