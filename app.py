@@ -130,6 +130,7 @@ def generate_pnl(transactions, coa):
         if acct not in pnl.columns:
             pnl[acct] = 0
     
+    pnl['OPEX'] = abs(pnl.get('OPEX', 0))
     pnl['Expense'] = abs(pnl.get('OPEX', 0) + pnl.get('COGS', 0))
     pnl['Net Profit'] = pnl.get('Revenue', 0) - pnl['Expense']
     pnl['Margin (%)'] = (pnl['Net Profit'] / pnl['Revenue'].replace(0, 1)) * 100
@@ -261,6 +262,12 @@ def main():
     
     # === FINANCIAL TRENDS SECTION ===
     st.header("📊 Financial Trends")
+    st.subheader("Profit & Loss Overview")
+
+    # Reorder PnL columns for better display
+    new_order = ['Year', 'Month', 'Period', 'Revenue', 'COGS', 'OPEX', 'Expense', 'Net Profit', 'Margin (%)']
+    pnl = pnl[new_order]
+    st.dataframe(pnl, use_container_width=True)
     
     # Revenue vs Net Profit Chart
     col1, col2 = st.columns([2, 1])
