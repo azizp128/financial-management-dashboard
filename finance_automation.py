@@ -82,12 +82,12 @@ def load_and_clean_data():
     # Peringatan kalau ada transaksi tanpa mapping
     mapped_categories = set(category_mapping.keys())
     existing_categories = set(transactions_merged['Category'].unique())
-    unused_in_transactions = mapped_categories - existing_categories
-    output_unused_in_transactions = pd.DataFrame({'Category': list(unused_in_transactions)})
+    unmapped_categories = existing_categories - mapped_categories
+    output_unmapped_categories = pd.DataFrame({'Category': list(unmapped_categories)})
 
-    if unused_in_transactions:
-        print("⚠️ Peringatan: Ada transaksi yang tidak terpetakan di COA!\n\tDaftar kategori belum terpetakan:", list(unused_in_transactions))
-        output_unused_in_transactions.to_csv("output/unmapped_transactions.csv", index=False)
+    if unmapped_categories:
+        print("⚠️ Peringatan: Ada transaksi yang tidak terpetakan di COA!\n\tDaftar kategori belum terpetakan:", list(unmapped_categories))
+        output_unmapped_categories.to_csv("output/unmapped_transactions.csv", index=False)
         print("👉 Disimpan di unmapped_transactions.csv untuk review.")
 
     return transactions_merged
@@ -113,6 +113,7 @@ def generate_pnl(transactions):
         aggfunc='sum',
         fill_value=0
     ).reset_index()
+    pnl.columns.name = None
 
     # Pastikan semua tipe akun yang diharapkan muncul, walaupun 0
     for acct in expected_types:
