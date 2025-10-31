@@ -168,28 +168,27 @@ def format_insights_for_dashboard(insights: Dict[str, List[str]]) -> Dict[str, s
             continue
 
         for line in insight_list:
-            line = line.strip()
+            line_clean = line.lstrip('*').strip()
 
-            if line.lower().startswith("headline insight"):
+            if line_clean.lower().startswith("headline insight"):
                 # Simpan insight sebelumnya
                 if current_headline:
-                    formatted_text += f"### {current_headline}\n\n{brief_clean}\n\n"
+                    formatted_text += f"### {current_headline.lstrip('*').strip()}\n\n{brief_clean}\n\n{action_clean}\n\n"
                     brief_clean, action_clean = "", ""  # reset untuk insight berikutnya
 
-                current_headline = line.split(":", 1)[-1].strip()
-                current_headline_clean = re.sub(r'^\*\*|\*\*$', '', current_headline).strip() 
+                current_headline = line_clean.split(":", 1)[-1].strip()
 
-            elif line.lower().startswith("brief explanation"):
-                brief = line.split(":", 1)[-1].strip()
+            elif line_clean.lower().startswith("brief explanation"):
+                brief = line_clean.split(":", 1)[-1].strip()
                 brief_clean = re.sub(r'^\*\*|\*\*$', '', brief).strip() 
 
-            elif line.lower().startswith("actionable recommendation"):
-                action = line.split(":", 1)[-1].strip()
-                action_clean = re.sub(r'^\*\*|\*\*$', '', action).strip()
+            elif line_clean.lower().startswith("actionable recommendation"):
+                action = line_clean.split(":", 1)[-1].strip()
+                action_clean = "> 💡 **Recommendation:** " + re.sub(r'^\*\*|\*\*$', '', action).strip()
 
         # Tambahkan insight terakhir
         if current_headline:
-            formatted_text += f"### {current_headline}\n\n{brief_clean}\n\nRecommendation: {action_clean}\n\n"
+            formatted_text += f"### {current_headline.lstrip('*').strip()}\n\n{brief_clean}\n\n{action_clean}\n\n"
 
         # Simpan hasil untuk section ini
         formatted_insights[section] = formatted_text.strip()

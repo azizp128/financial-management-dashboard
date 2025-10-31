@@ -507,7 +507,7 @@ def main():
             
             with st.spinner("Generating Revenue Insights..."):
                 insights = generate_revenue_analysis_insights(transactions)
-                st.session_state.revenue_insights = insights
+                st.session_state["revenue_insights"] = insights
                 st.success("✅ Revenue insights updated!")
 
         if "revenue_insights" in st.session_state:
@@ -629,7 +629,7 @@ def main():
 
             with st.spinner("Generating Expense Insights..."):
                 insights = generate_expense_analysis_insights(transactions)
-                st.session_state.expense_insights = insights
+                st.session_state["expense_insights"] = insights
                 st.success("✅ Expense insights updated!")
 
         if "expense_insights" in st.session_state:
@@ -838,7 +838,9 @@ def main():
     
     with col1:
         # Export PnL
+        st.subheader("Profit & Loss Report")
         pnl_csv = pnl.to_csv(index=False)
+        st.dataframe(pnl, use_container_width=True)
         st.download_button(
             label="Download P&L Report",
             data=pnl_csv,
@@ -848,7 +850,9 @@ def main():
     
     with col2:
         # Export Transactions
+        st.subheader("Transaction Details")
         trans_csv = transactions.to_csv(index=False)
+        st.dataframe(transactions, use_container_width=True)
         st.download_button(
             label="Download Transaction Details",
             data=trans_csv,
@@ -858,7 +862,9 @@ def main():
     
     with col3:
         # Export Product Performance
+        st.subheader("Product Performance")
         prod_csv = product_perf.to_csv(index=False)
+        st.dataframe(product_perf, use_container_width=True)
         st.download_button(
             label="Download Product Performance",
             data=prod_csv,
