@@ -291,7 +291,7 @@ def main():
     st.header("📊 Financial Trends")
     tab1, tab2, tab3 = st.tabs([
         "Profit & Loss Overview",
-        "Revenue vs Net Profit Over Time",
+        "Revenue vs Expense Over Time",
         "Key Insights"
     ])
 
@@ -306,7 +306,7 @@ def main():
     with tab2:
         col1, col2 = st.columns([2, 1])
         with col1:
-            st.subheader("Revenue vs Net Profit Over Time")
+            st.subheader("Revenue, Expense & Net Profit Over Time")
             
             fig = make_subplots(specs=[[{"secondary_y": True}]])
             
@@ -316,6 +316,17 @@ def main():
                     y=pnl['Revenue'],
                     name="Revenue",
                     line=dict(color='#2E86DE', width=3),
+                    mode='lines+markers'
+                ),
+                secondary_y=False
+            )
+
+            fig.add_trace(
+                go.Scatter(
+                    x=pnl['Period'],
+                    y=pnl['Expense'],
+                    name="Expense",
+                    line=dict(color="#DE342E", width=3),
                     mode='lines+markers'
                 ),
                 secondary_y=False
@@ -876,9 +887,9 @@ def main():
     st.markdown("---")
     st.markdown("""
     <div style='text-align: center; color: #7f8c8d;'>
-        <p>Financial Management Dashboard | Generated: {}</p>
+        <p>Financial Management Dashboard | Developed by Aziz Prabowo</p>
     </div>
-    """.format(datetime.now().strftime('%Y-%m-%d %H:%M:%S')), unsafe_allow_html=True)
+    """, unsafe_allow_html=True)
 
 if __name__ == "__main__":
     main()
