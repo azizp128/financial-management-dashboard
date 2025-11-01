@@ -18,7 +18,7 @@ def generate_ai_insights(prompt: str) -> List[str]:
         )
 
         response = client.chat.completions.create(
-            model="meta-llama/llama-3.1-8b-instruct",
+            model="mistralai/mistral-7b-instruct",
             messages=[
                 {
                     "role": "system",
