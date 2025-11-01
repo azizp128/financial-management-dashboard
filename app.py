@@ -428,8 +428,8 @@ def main():
 
         # Tampilkan hasil jika sudah ada di session_state
         if "financial_insights" in st.session_state:
-            formatted = format_insights_for_dashboard({"financial_trends": st.session_state["financial_insights"]})
-            st.markdown(formatted["financial_trends"])
+            formatted = format_insights_for_dashboard(st.session_state["financial_insights"])
+            st.markdown(formatted[0])
             # st.write(st.session_state["financial_insights"])
 
     st.markdown("---")
@@ -550,8 +550,8 @@ def main():
                 st.success("✅ Revenue insights updated!")
 
         if "revenue_insights" in st.session_state:
-            formatted = format_insights_for_dashboard({"revenue_analysis": st.session_state["revenue_insights"]})
-            st.markdown(formatted["revenue_analysis"])
+            formatted = format_insights_for_dashboard(st.session_state["revenue_insights"])
+            st.markdown(formatted[0])
             # st.write(st.session_state["revenue_insights"])
 
     
@@ -672,8 +672,8 @@ def main():
                 st.success("✅ Expense insights updated!")
 
         if "expense_insights" in st.session_state:
-            formatted = format_insights_for_dashboard({"expense_analysis": st.session_state["expense_insights"]})
-            st.markdown(formatted["expense_analysis"])
+            formatted = format_insights_for_dashboard(st.session_state["expense_insights"])
+            st.markdown(formatted[0])
             # st.write(st.session_state["expense_insights"])
     
     st.markdown("---")

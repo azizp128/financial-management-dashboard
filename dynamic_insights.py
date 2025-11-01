@@ -148,49 +148,44 @@ def generate_expense_analysis_insights(transactions: pd.DataFrame) -> List[str]:
     return generate_ai_insights(prompt)
 
 # Format Insights for Dashboard Display
-def format_insights_for_dashboard(insights: Dict[str, List[str]]) -> Dict[str, str]:
-    """
-    Format AI insights for consistent display in Streamlit.
-    Expected input: List of strings like
-        ["Headline Insight 1: ...", "Brief Explanation of the insight 1: ...", "Actionable Recommendation 1: ...", ...]
-    Output will be Markdown-formatted text blocks.
-    """
-    formatted_insights = {}
+def format_insights_for_dashboard(insights: List[str]) -> List[str]:
+    formatted_text = ""
+    formatted_insights = []
 
-    for section, insight_list in insights.items():
-        formatted_text = ""
-        current_headline = ""
-        brief_clean = "" 
-        action_clean = "" 
+    current_headline_clean = ""
+    brief_clean = ""
+    action_clean = ""
 
-        if not insight_list:  # jika None atau kosong
-            formatted_insights[section] = "No insights available."
-            continue
+    if not insights: # jika None atau kosong formatted_insights = "No insights available."
+        formatted_insights.append("No insights available.")
+        return formatted_insights
 
-        for line in insight_list:
-            line_clean = line.lstrip('*').strip()
+    for line in insights:
+        line_clean = line.lstrip('*').strip()
 
-            if line_clean.lower().startswith("headline insight"):
-                # Simpan insight sebelumnya
-                if current_headline:
-                    formatted_text += f"### {current_headline.lstrip('*').strip()}\n\n{brief_clean}\n\n{action_clean}\n\n"
-                    brief_clean, action_clean = "", ""  # reset untuk insight berikutnya
 
-                current_headline = line_clean.split(":", 1)[-1].strip()
+        if line_clean.lower().startswith("headline insight"):
+            # Simpan insight sebelumnya sebelum mulai yang baru
+            if current_headline_clean:
+                formatted_text += f"### {current_headline_clean}\n\n{brief_clean}\n\n{action_clean}\n\n"
+                brief_clean, action_clean = "", ""
 
-            elif line_clean.lower().startswith("brief explanation"):
-                brief = line_clean.split(":", 1)[-1].strip()
-                brief_clean = re.sub(r'^\*\*|\*\*$', '', brief).strip() 
+            current_headline = line_clean.split(":", 1)[-1].strip()
+            current_headline_clean = re.sub(r'\*+', '', current_headline).strip()
 
-            elif line_clean.lower().startswith("actionable recommendation"):
-                action = line_clean.split(":", 1)[-1].strip()
-                action_clean = "> 💡 **Recommendation:** " + re.sub(r'^\*\*|\*\*$', '', action).strip()
+        elif line_clean.lower().startswith("brief explanation"):
+            brief = line_clean.split(":", 1)[-1].strip()
+            brief_clean = re.sub(r'\*+', '', brief).strip()
 
-        # Tambahkan insight terakhir
-        if current_headline:
-            formatted_text += f"### {current_headline.lstrip('*').strip()}\n\n{brief_clean}\n\n{action_clean}\n\n"
+        elif line_clean.lower().startswith("actionable recommendation"):
+            action = line_clean.split(":", 1)[-1].strip()
+            action_clean = "> 💡 **Recommendation:** " + re.sub(r'\*+', '', action).strip()
 
-        # Simpan hasil untuk section ini
-        formatted_insights[section] = formatted_text.strip()
+    # setelah loop selesai → tambahkan insight terakhir
+    if current_headline_clean:
+        formatted_text += f"### {current_headline_clean}\n\n{brief_clean}\n\n{action_clean}\n\n"
+        formatted_text = formatted_text.replace('$', 'IDR ')
+
+    formatted_insights.append(formatted_text.strip())
 
     return formatted_insights
