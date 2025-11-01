@@ -1,5 +1,6 @@
 import streamlit as st
 import pandas as pd
+import difflib
 import plotly.express as px
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
@@ -102,21 +103,30 @@ def prepare_transactions(sales, expenses, coa):
     transactions['Amount'] = pd.to_numeric(transactions['Amount'], errors='coerce')
     
     # Category mapping
-    category_mapping = {
-        "Jewelry": "Jewelry Sales",
-        "Salaries": "Salaries",
-        "Supplies": "Supplies",
-        "Marketing": "Marketing",
-        "Delivery": "Delivery",
-        "Rent": "Rent",
-        "Utilities": "Utilities",
-        "Product Cost": "Product Cost"
-    }
+    coa_categories = list(coa['Category'].unique())
+    trx_categories = list(transactions['Category'].unique())
+
+    # Mapping categories using difflib
+    category_mapping = {}
+
+    for cat in trx_categories:
+        # Find closest match in COA categories with a cutoff
+        match = difflib.get_close_matches(cat, coa_categories, n=1, cutoff=0.7)
+        if match:
+            category_mapping[cat] = match[0]
+        else:
+            category_mapping[cat] = cat
+
+    # Check for any COA categories not in transactions
+    for cat in coa_categories:
+        if cat not in category_mapping.values() and cat not in category_mapping.keys():
+            # Add coa category with None mapping
+            category_mapping[cat] = cat
     
-    transactions["Category_COA"] = transactions["Category"].map(category_mapping)
+    transactions["Category_mapped"] = transactions["Category"].map(category_mapping)
     
     # Merge with COA
-    transactions_merged = transactions.merge(coa, how="left", left_on="Category_COA", right_on="Category")
+    transactions_merged = transactions.merge(coa, how="left", left_on="Category_mapped", right_on="Category")
     transactions_merged = transactions_merged.drop(columns=["Category_y"]).rename(columns={"Category_x": "Category"})
     transactions_merged['Account'] = pd.to_numeric(transactions_merged['Account'], errors='coerce')
     
@@ -130,16 +140,18 @@ def prepare_transactions(sales, expenses, coa):
     transactions_merged['Month'] = transactions_merged['Date'].dt.month
     transactions_merged['Period'] = transactions_merged['Date'].dt.to_period('M').astype(str)
 
-    # Check for unmapped categories
-    mapped_categories = set(category_mapping.keys())
+    # Define mapped and existing categories
+    coa_mapped_categories = [key for key, value in category_mapping.items() if value in coa_categories]
     existing_categories = set(transactions_merged['Category'].unique())
-    unmapped_categories = existing_categories - mapped_categories
+
+    # Check for unmapped coa categories
+    unmapped_coa_categories = existing_categories - set(coa_mapped_categories)
 
     # Check for umapped transactions
-    unmapped_transactions = mapped_categories - existing_categories
+    unmapped_transactions = set(coa_mapped_categories) - existing_categories
     
     # Store unmapped categories for later use
-    transactions_merged._unmapped_categories = unmapped_categories
+    transactions_merged._unmapped_categories = unmapped_coa_categories
     transactions_merged._unmapped_transaction = unmapped_transactions
     
     return transactions_merged
