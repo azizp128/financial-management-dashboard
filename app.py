@@ -217,11 +217,29 @@ def main():
     if not all([sales_file, expenses_file, coa_file]):
         st.info("👈 Please upload all required files to begin analysis")
         st.markdown("""
-        ### Required Files:
+        ### Required Files
         1. **Sales Data** - Transaction sales records
         2. **Expenses Data** - Operating expenses
         3. **Mapping COA** - Chart of Accounts mapping
         """)
+        sales_sample = pd.read_excel("datasets/sales.xlsx").sample(100)
+        expenses_sample = pd.read_excel("datasets/expenses.xlsx").sample(100)
+        coa_sample = pd.read_excel("datasets/mapping_coa.xlsx")
+
+        st.subheader("Sample Data Format")
+        col1, col2, col3 = st.columns(3)
+        with col1:
+            st.markdown("**Sales Data Sample**")
+            st.dataframe(sales_sample, use_container_width=True)
+            st.download_button("Download Sample Sales Data", data=sales_sample.to_csv(index=False), file_name="sample_sales_data.csv", mime="text/csv", type="primary")
+        with col2:
+            st.markdown("**Expenses Data Sample**")
+            st.dataframe(expenses_sample, use_container_width=True)
+            st.download_button("Download Sample Expenses Data", data=expenses_sample.to_csv(index=False), file_name="sample_expenses_data.csv", mime="text/csv", type="primary")
+        with col3:
+            st.markdown("**Mapping COA Sample**")
+            st.dataframe(coa_sample, use_container_width=True)
+            st.download_button("Download Sample COA Data", data=coa_sample.to_csv(index=False), file_name="sample_coa_data.csv", mime="text/csv", type="primary")
         return
     
     # Load and process data
