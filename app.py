@@ -84,6 +84,11 @@ def prepare_transactions(sales, expenses, coa):
     expenses["Product"] = None
     expenses = expenses[["Date", "Category", "Product", "Description", "Amount", "InvoiceNo", "Customer", "Region", "Source_Type"]]
     
+    # Remove duplicates before standardizing
+    sales = sales.drop_duplicates(subset=["Date", "InvoiceNo", "Product", "Amount"], keep='first')
+    expenses = expenses.drop_duplicates(subset=["Date", "Category", "Description", "Amount"], keep='first')
+    coa = coa.drop_duplicates(subset=["Category", "Account"], keep='first')
+    
     # Combine transactions
     transactions = pd.concat([sales, expenses], ignore_index=True)
     
@@ -115,6 +120,11 @@ def prepare_transactions(sales, expenses, coa):
     transactions_merged = transactions_merged.drop(columns=["Category_y"]).rename(columns={"Category_x": "Category"})
     transactions_merged['Account'] = pd.to_numeric(transactions_merged['Account'], errors='coerce')
     
+    # Safety check: Ensure no duplicate after merging
+    transactions_merged = transactions_merged.drop_duplicates(
+        subset=["Date", "InvoiceNo", "Amount", "Source_Type"], keep='first'
+    )
+
     # Add time dimensions
     transactions_merged['Year'] = transactions_merged['Date'].dt.year
     transactions_merged['Month'] = transactions_merged['Date'].dt.month
