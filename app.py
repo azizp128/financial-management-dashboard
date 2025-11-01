@@ -166,12 +166,19 @@ def generate_pnl(transactions, coa):
         fill_value=0
     ).reset_index()
     
-    for acct in ['Revenue', 'OPEX', 'COGS']:
+    # Ensure all expected accounts are present
+    coa_categories = set(coa['AccountType'].unique())
+    for acct in coa_categories:
         if acct not in pnl.columns:
             pnl[acct] = 0
-    
-    pnl['OPEX'] = abs(pnl.get('OPEX', 0))
-    pnl['Expense'] = abs(pnl.get('OPEX', 0) + pnl.get('COGS', 0))
+
+    # Define expense categories (Note: Non expense accounts can be explicitly excluded)
+    expense_categories = set(coa.loc[~coa['AccountType'].isin(['Revenue', 'Assets']), 'AccountType'].tolist())
+    expense_cols = [col for col in pnl.columns if col in expense_categories]
+
+    # Calculate PnL metrics
+    pnl[expense_cols] = pnl[expense_cols].abs()
+    pnl['Expense'] = pnl[expense_cols].sum(axis=1)
     pnl['Net Profit'] = pnl.get('Revenue', 0) - pnl['Expense']
     pnl['Margin (%)'] = (pnl['Net Profit'] / pnl['Revenue'].replace(0, 1)) * 100
     
@@ -337,10 +344,6 @@ def main():
 
     with tab1:
         st.subheader("Profit & Loss Overview")
-
-        # Reorder PnL columns for better display
-        new_order = ['Year', 'Month', 'Period', 'Revenue', 'COGS', 'OPEX', 'Expense', 'Net Profit', 'Margin (%)']
-        pnl = pnl[new_order]
         st.dataframe(pnl, use_container_width=True)
     
     with tab2:
