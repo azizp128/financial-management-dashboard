@@ -30,7 +30,7 @@
    ```
 
 3. **Set your OpenRouter API key:**
-   - Add your key to Streamlit secrets (secrets.toml):
+   - Add your key to Streamlit secrets (`./streamlit/secrets.toml`):
      ```
      OPENROUTER_API_KEY = "your_api_key_here"
      ```
@@ -46,7 +46,6 @@
 financial-management-dashboard/
 ├── app.py                  # Main Streamlit dashboard
 ├── dynamic_insights.py     # AI-powered insights functions
-├── finance_automation.py   # Data automation utilities
 ├── requirements.txt        # Python dependencies
 ├── datasets/               # Example input data
 ├── output/                 # Generated reports
