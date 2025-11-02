@@ -693,172 +693,173 @@ def main():
     
     st.markdown("---")
 
-
     # === DATA RECONCILIATION SECTION (CONDITIONAL) ===
     if unmapped_categories or missing_accounts or unmapped_transactions:
-        st.header("⚠️ Data Reconciliation Issues")
-        
+        st.header("⚠️ Data Reconciliation Issues")    
         st.warning("""
         **Attention Required:** Data quality issues have been detected that may affect report accuracy.
         Please review and address the following issues:
         """)
-        
-        col1, col2, col3 = st.columns(3)
-        
-        with col1:
-            # Check for unmapped categories
+
+        tab1, tab2 = st.tabs([
+            "Detailed Reports",
+            "Full Report"
+        ])
+        with tab1:
+            st.subheader("Reconciliation Issues Details")
+            col1, col2, col3 = st.columns(3)
+            
+            with col1:
+                # Check for unmapped categories
+                if unmapped_categories:
+                    st.error(f"**🔴 {len(unmapped_categories)} Unmapped Categories Found**")
+                    st.markdown("""
+                    These categories exist in your transaction data but are not mapped in the Chart of Accounts.
+                    This may cause incomplete financial reporting.
+                    """)
+                    
+                    unmapped_df = pd.DataFrame({
+                        'Category': sorted(list(unmapped_categories)),
+                        'Status': ['Not Mapped'] * len(unmapped_categories),
+                        'Impact': ['Financial data not categorized'] * len(unmapped_categories)
+                    })
+                    
+                    st.dataframe(unmapped_df, use_container_width=True, height=200)
+                    
+                    # Count transactions affected
+                    affected_transactions = transactions[transactions['Category'].isin(unmapped_categories)]
+                    affected_amount = abs(affected_transactions['Amount'].sum())
+                    
+                    st.metric(
+                        label="Affected Transactions",
+                        value=f"{len(affected_transactions)} transactions",
+                        delta=f"IDR {affected_amount:,.0f} total amount"
+                    )
+                    
+                    # Download button for unmapped categories
+                    unmapped_csv = unmapped_df.to_csv(index=False)
+                    st.download_button(
+                        label="📥 Download Unmapped Categories",
+                        data=unmapped_csv,
+                        file_name=f"Unmapped_Categories_{datetime.now().strftime('%Y%m%d')}.csv",
+                        mime="text/csv",
+                        type="primary"
+                    )
+                else:
+                    st.success("**✅ All Categories Mapped**")
+                    st.markdown("All transaction categories are properly mapped to the Chart of Accounts.")
+            
+            with col2:
+                # Check for missing account types
+                if missing_accounts:
+                    st.error(f"**🔴 {len(missing_accounts)} Missing Account Types**")
+                    st.markdown("""
+                    These account types are defined in your COA but have no transactions this period.
+                    This may indicate missing data or inactive accounts.
+                    """)
+                    
+                    missing_df = pd.DataFrame({
+                        'Account Type': sorted(missing_accounts),
+                        'Status': ['No Transactions'] * len(missing_accounts),
+                        'Recommendation': ['Verify if transactions exist'] * len(missing_accounts)
+                    })
+                    
+                    st.dataframe(missing_df, use_container_width=True, height=200)
+                    
+                    st.info("""
+                    **Note:** Missing account types may be expected if:
+                    - The account is not active this period
+                    - It's a new account with no history yet
+                    - Certain expense types don't occur every month
+                    """)
+                    
+                    # Download button for missing accounts
+                    missing_csv = missing_df.to_csv(index=False)
+                    st.download_button(
+                        label="📥 Download Missing Accounts",
+                        data=missing_csv,
+                        file_name=f"Missing_Accounts_{datetime.now().strftime('%Y%m%d')}.csv",
+                        mime="text/csv",
+                        type="primary"
+                    )
+                else:
+                    st.success("**✅ All Account Types Active**")
+                    st.markdown("All expected account types have transactions in this period.")
+            
+            with col3:
+                # Check for unmapped transactions
+                if unmapped_transactions:
+                    st.warning(f"**⚠️ {len(unmapped_transactions)} Categories Missing in Transactions**")
+                    st.markdown("""
+                    These categories exist in your COA but have no transactions this period.
+                    This helps identify accounts or categories that are inactive or missing data.
+                    """)
+
+                    # Create DataFrame for display
+                    missing_cat_df = pd.DataFrame({
+                        'Category': sorted(list(unmapped_transactions)),
+                        'Status': ['No Transactions'] * len(unmapped_transactions),
+                        'Recommendation': ['Verify if transactions exist'] * len(unmapped_transactions)
+                    })
+
+                    st.dataframe(missing_cat_df, use_container_width=True, height=200)
+
+                    st.info("""
+                    **Note:** Categories missing in transactions may be expected if:
+                    - The category is not active this period
+                    - It's a new category with no history yet
+                    - Certain categories don't incur transactions every month
+                    """)
+
+                    # Download CSV
+                    missing_cat_csv = missing_cat_df.to_csv(index=False)
+                    st.download_button(
+                        label="📥 Download Missing Categories",
+                        data=missing_cat_csv,
+                        file_name=f"Missing_Categories_{datetime.now().strftime('%Y%m%d')}.csv",
+                        mime="text/csv",
+                        type="primary"
+                    )
+                else:
+                    st.success("**✅ All Categories Have Transactions**")
+                    st.markdown("All COA categories have transactions in this period.")
+
+        with tab2:
+            # Combined reconciliation report
+            st.subheader("Complete Reconciliation Report")
+            
+            reconciliation_summary = {
+                'Issue Type': [],
+                'Missing': [],
+                'Count': [],
+                'Severity': [],
+                'Action Required': []
+            }
+            
             if unmapped_categories:
-                st.error(f"**🔴 {len(unmapped_categories)} Unmapped Categories Found**")
-                st.markdown("""
-                These categories exist in your transaction data but are not mapped in the Chart of Accounts.
-                This may cause incomplete financial reporting.
-                """)
-                
-                unmapped_df = pd.DataFrame({
-                    'Category': sorted(list(unmapped_categories)),
-                    'Status': ['Not Mapped'] * len(unmapped_categories),
-                    'Impact': ['Financial data not categorized'] * len(unmapped_categories)
-                })
-                
-                st.dataframe(unmapped_df, use_container_width=True, height=200)
-                
-                # Count transactions affected
-                affected_transactions = transactions[transactions['Category'].isin(unmapped_categories)]
-                affected_amount = abs(affected_transactions['Amount'].sum())
-                
-                st.metric(
-                    label="Affected Transactions",
-                    value=f"{len(affected_transactions)} transactions",
-                    delta=f"IDR {affected_amount:,.0f} total amount"
-                )
-                
-                # Download button for unmapped categories
-                unmapped_csv = unmapped_df.to_csv(index=False)
-                st.download_button(
-                    label="📥 Download Unmapped Categories",
-                    data=unmapped_csv,
-                    file_name=f"Unmapped_Categories_{datetime.now().strftime('%Y%m%d')}.csv",
-                    mime="text/csv",
-                    type="primary"
-                )
-            else:
-                st.success("**✅ All Categories Mapped**")
-                st.markdown("All transaction categories are properly mapped to the Chart of Accounts.")
-        
-        with col2:
-            # Check for missing account types
+                reconciliation_summary['Issue Type'].append('Unmapped Categories')
+                reconciliation_summary['Missing'].append(list(unmapped_categories))
+                reconciliation_summary['Count'].append(len(unmapped_categories))
+                reconciliation_summary['Severity'].append('High')
+                reconciliation_summary['Action Required'].append('Add mappings to COA')
+            
             if missing_accounts:
-                st.error(f"**🔴 {len(missing_accounts)} Missing Account Types**")
-                st.markdown("""
-                These account types are defined in your COA but have no transactions this period.
-                This may indicate missing data or inactive accounts.
-                """)
-                
-                missing_df = pd.DataFrame({
-                    'Account Type': sorted(missing_accounts),
-                    'Status': ['No Transactions'] * len(missing_accounts),
-                    'Recommendation': ['Verify if transactions exist'] * len(missing_accounts)
-                })
-                
-                st.dataframe(missing_df, use_container_width=True, height=200)
-                
-                st.info("""
-                **Note:** Missing account types may be expected if:
-                - The account is not active this period
-                - It's a new account with no history yet
-                - Certain expense types don't occur every month
-                """)
-                
-                # Download button for missing accounts
-                missing_csv = missing_df.to_csv(index=False)
-                st.download_button(
-                    label="📥 Download Missing Accounts",
-                    data=missing_csv,
-                    file_name=f"Missing_Accounts_{datetime.now().strftime('%Y%m%d')}.csv",
-                    mime="text/csv",
-                    type="primary"
-                )
-            else:
-                st.success("**✅ All Account Types Active**")
-                st.markdown("All expected account types have transactions in this period.")
-        
-        with col3:
-            # Check for unmapped transactions
+                reconciliation_summary['Issue Type'].append('Missing Account Types')
+                reconciliation_summary['Missing'].append(list(missing_accounts))
+                reconciliation_summary['Count'].append(len(missing_accounts))
+                reconciliation_summary['Severity'].append('Medium')
+                reconciliation_summary['Action Required'].append('Verify transaction completeness')
+            
             if unmapped_transactions:
-                st.warning(f"**⚠️ {len(unmapped_transactions)} Categories Missing in Transactions**")
-                st.markdown("""
-                These categories exist in your COA but have no transactions this period.
-                This helps identify accounts or categories that are inactive or missing data.
-                """)
-
-                # Create DataFrame for display
-                missing_cat_df = pd.DataFrame({
-                    'Category': sorted(list(unmapped_transactions)),
-                    'Status': ['No Transactions'] * len(unmapped_transactions),
-                    'Recommendation': ['Verify if transactions exist'] * len(unmapped_transactions)
-                })
-
-                st.dataframe(missing_cat_df, use_container_width=True, height=200)
-
-                st.info("""
-                **Note:** Categories missing in transactions may be expected if:
-                - The category is not active this period
-                - It's a new category with no history yet
-                - Certain categories don't incur transactions every month
-                """)
-
-                # Download CSV
-                missing_cat_csv = missing_cat_df.to_csv(index=False)
-                st.download_button(
-                    label="📥 Download Missing Categories",
-                    data=missing_cat_csv,
-                    file_name=f"Missing_Categories_{datetime.now().strftime('%Y%m%d')}.csv",
-                    mime="text/csv",
-                    type="primary"
-                )
-            else:
-                st.success("**✅ All Categories Have Transactions**")
-                st.markdown("All COA categories have transactions in this period.")
-
-        # Combined reconciliation report
-        st.markdown("---")
-        st.subheader("📋 Complete Reconciliation Report")
-        
-        reconciliation_summary = {
-            'Issue Type': [],
-            'Missing': [],
-            'Count': [],
-            'Severity': [],
-            'Action Required': []
-        }
-        
-        if unmapped_categories:
-            reconciliation_summary['Issue Type'].append('Unmapped Categories')
-            reconciliation_summary['Missing'].append(list(unmapped_categories))
-            reconciliation_summary['Count'].append(len(unmapped_categories))
-            reconciliation_summary['Severity'].append('High')
-            reconciliation_summary['Action Required'].append('Add mappings to COA')
-        
-        if missing_accounts:
-            reconciliation_summary['Issue Type'].append('Missing Account Types')
-            reconciliation_summary['Missing'].append(list(missing_accounts))
-            reconciliation_summary['Count'].append(len(missing_accounts))
-            reconciliation_summary['Severity'].append('Medium')
-            reconciliation_summary['Action Required'].append('Verify transaction completeness')
-        
-        if unmapped_transactions:
-            reconciliation_summary['Issue Type'].append('Categories Missing in Transactions')
-            reconciliation_summary['Missing'].append(list(unmapped_transactions))
-            reconciliation_summary['Count'].append(len(unmapped_transactions))
-            reconciliation_summary['Severity'].append('Low')
-            reconciliation_summary['Action Required'].append('Check for inactive categories')
-        
-        summary_df = pd.DataFrame(reconciliation_summary)
-        st.dataframe(summary_df, use_container_width=True)
-        
-        # Combined download
-        col1, col2, col3 = st.columns(3)
-        with col2:
+                reconciliation_summary['Issue Type'].append('Categories Missing in Transactions')
+                reconciliation_summary['Missing'].append(list(unmapped_transactions))
+                reconciliation_summary['Count'].append(len(unmapped_transactions))
+                reconciliation_summary['Severity'].append('Low')
+                reconciliation_summary['Action Required'].append('Check for inactive categories')
+            
+            summary_df = pd.DataFrame(reconciliation_summary)
+            st.dataframe(summary_df, use_container_width=True)
+            
             # Create combined reconciliation file
             with pd.ExcelWriter('reconciliation_report.xlsx', engine='openpyxl') as writer:
                 if unmapped_categories:
@@ -879,53 +880,85 @@ def main():
                     data=f,
                     file_name=f"Reconciliation_Report_{datetime.now().strftime('%Y%m%d')}.xlsx",
                     mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                    type="primary",
-                    use_container_width=True
+                    type="primary"
                 )
         
         st.markdown("---")
     
     # === EXPORT SECTION ===
     st.header("📥 Export Reports")
+    tab1, tab2 = st.tabs([
+            "Detailed Reports",
+            "Full Report"
+        ])
     
-    col1, col2, col3 = st.columns(3)
+    with tab1:
+        col1, col2, col3 = st.columns(3)
+        
+        with col1:
+            # Export PnL
+            st.subheader("Profit & Loss Report")
+            pnl_csv = pnl.to_csv(index=False)
+            st.dataframe(pnl, use_container_width=True)
+            st.download_button(
+                label="📥 Download P&L Report",
+                data=pnl_csv,
+                file_name=f"PnL_Report_{datetime.now().strftime('%Y%m%d')}.csv",
+                mime="text/csv",
+                type="primary"
+            )
+        
+        with col2:
+            # Export Transactions
+            st.subheader("Transaction Details")
+            trans_csv = transactions.to_csv(index=False)
+            st.dataframe(transactions, use_container_width=True)
+            st.download_button(
+                label="📥 Download Transaction Details",
+                data=trans_csv,
+                file_name=f"Transactions_{datetime.now().strftime('%Y%m%d')}.csv",
+                mime="text/csv",
+                type="primary"
+            )
+        
+        with col3:
+            # Export Product Performance
+            st.subheader("Product Performance")
+            prod_csv = product_perf.to_csv(index=False)
+            st.dataframe(product_perf, use_container_width=True)
+            st.download_button(
+                label="📥 Download Product Performance",
+                data=prod_csv,
+                file_name=f"Product_Performance_{datetime.now().strftime('%Y%m%d')}.csv",
+                mime="text/csv",
+                type="primary"
+            )
     
-    with col1:
-        # Export PnL
-        st.subheader("Profit & Loss Report")
-        pnl_csv = pnl.to_csv(index=False)
-        st.dataframe(pnl, use_container_width=True)
-        st.download_button(
-            label="Download P&L Report",
-            data=pnl_csv,
-            file_name=f"PnL_Report_{datetime.now().strftime('%Y%m%d')}.csv",
-            mime="text/csv"
-        )
-    
-    with col2:
-        # Export Transactions
-        st.subheader("Transaction Details")
-        trans_csv = transactions.to_csv(index=False)
-        st.dataframe(transactions, use_container_width=True)
-        st.download_button(
-            label="Download Transaction Details",
-            data=trans_csv,
-            file_name=f"Transactions_{datetime.now().strftime('%Y%m%d')}.csv",
-            mime="text/csv"
-        )
-    
-    with col3:
-        # Export Product Performance
-        st.subheader("Product Performance")
-        prod_csv = product_perf.to_csv(index=False)
-        st.dataframe(product_perf, use_container_width=True)
-        st.download_button(
-            label="Download Product Performance",
-            data=prod_csv,
-            file_name=f"Product_Performance_{datetime.now().strftime('%Y%m%d')}.csv",
-            mime="text/csv"
-        )
-    
+    with tab2:
+        # Create complete report
+        st.subheader("Complete Financial Report")
+        st.markdown("""
+        This report includes:
+        - Profit & Loss Statement
+        - Detailed Transactions
+        - Product Performance Analysis
+                    
+        Each section is provided in separate sheets for comprehensive review.
+        """)
+        with pd.ExcelWriter('complete_financial_report.xlsx', engine='openpyxl') as writer:
+            pnl.to_excel(writer, sheet_name='Profit & Loss', index=False)
+            transactions.to_excel(writer, sheet_name='Transactions', index=False)
+            product_perf.to_excel(writer, sheet_name='Product Performance', index=False)
+        
+        with open('complete_financial_report.xlsx', 'rb') as f:
+            st.download_button(
+                label="📥 Download Complete Financial Report",
+                data=f,
+                file_name=f"Complete_Financial_Report_{datetime.now().strftime('%Y%m%d')}.xlsx",
+                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                type="primary"
+            )
+
     # Footer
     st.markdown("---")
     st.markdown("""
