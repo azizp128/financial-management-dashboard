@@ -172,8 +172,8 @@ def generate_pnl(transactions, coa):
         if acct not in pnl.columns:
             pnl[acct] = 0
 
-    # Define expense categories (Note: Non expense accounts can be explicitly excluded)
-    expense_categories = set(coa.loc[~coa['AccountType'].isin(['Revenue', 'Assets']), 'AccountType'].tolist())
+    # Define expense categories
+    expense_categories = set(transactions.loc[~transactions['Source_Type'].isin(['Sales']), 'AccountType'].tolist())
     expense_cols = [col for col in pnl.columns if col in expense_categories]
 
     # Calculate PnL metrics
