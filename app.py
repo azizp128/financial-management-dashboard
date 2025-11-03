@@ -531,7 +531,7 @@ def main():
         
         with col1:
             st.subheader("Top 5 Revenue Generators")
-            top_products = product_perf.head(5)
+            top_products = product_perf.sort_values(by='Revenue', ascending=False).head(5)
             
             for idx, row in top_products.sort_values(by='Revenue', ascending=False).iterrows():
                 st.markdown(f"""
@@ -542,7 +542,7 @@ def main():
         
         with col2:
             st.subheader("Bottom 5 Products")
-            bottom_products = product_perf.tail(5)
+            bottom_products = product_perf.sort_values(by='Revenue', ascending=False).tail(5)
             
             for idx, row in bottom_products.iterrows():
                 st.markdown(f"""
