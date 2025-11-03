@@ -496,14 +496,14 @@ def main():
             'InvoiceNo': 'count'
         }).reset_index()
         product_perf.columns = ['Product', 'Revenue', 'Transactions']
-        product_perf = product_perf.sort_values('Revenue', ascending=True)
+        product_perf = product_perf.sort_values('Revenue', ascending=False)
         
         col1, col2 = st.columns(2)
         
         with col1:
             st.subheader("Top 10 Products by Revenue")
             fig = px.bar(
-                product_perf.head(10),
+                product_perf.head(10).sort_values('Revenue', ascending=True),
                 x='Revenue',
                 y='Product',
                 orientation='h',
